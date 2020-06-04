@@ -1,0 +1,45 @@
+***** Data Processing and Cleaning using Pig *****
+
+#Loading data in Pig
+
+hadoop fs -mkdir /groceries
+hadoop fs -put /home/saumit_91/groceries.csv /groceries
+
+Main = LOAD '/groceries/groceries.csv' USING TextLoader();
+
+#Cleaning Null items for a transaction
+
+Main1 = foreach Main generate REPLACE($0, '(,[,]*)', ',') ;
+
+#Seperating '/' items
+Main2 = FOREACH Main1 GENERATE REPLACE($0,'/',',') ;
+
+#Storing the file
+
+STORE Main2 INTO '/groceries/groceriesfinal.csv' USING PigStorage(',');
+
+#Loading again USING PigStorage(',')
+
+Main = LOAD '/groceries/groceriesfinal.csv' USING PigStorage(',');
+
+#Ranking each transaction
+
+Main1 = rank Main ;
+
+#Creating each item per transaction record
+
+Main2 = foreach Main1 generate $0,FLATTEN(TOBAG($1..));
+
+#Removing Null items per transaction
+
+Main3 = filter Main2 by $1 is not null; 
+
+#Concatenating rank id with transaction term "T"
+
+main4 = FOREACH Main3 GENERATE CONCAT('T',$0), $1 ; 
+
+#Storing the file and downloading
+
+STORE main4 INTO '/groceries/groceriesfinal1.csv' USING PigStorage(',');
+
+hadoop fs -copyToLocal /groceries/groceriesfinal1.csv /home/saumit_91/groceriesfinal1.csv
